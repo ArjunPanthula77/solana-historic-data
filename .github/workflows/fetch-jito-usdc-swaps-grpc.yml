@@ -1,0 +1,52 @@
+name: Fetch JTO-USDC raw swaps (Alchemy gRPC replay)
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_slot:
+        description: "Epoch start slot"
+        required: true
+        default: "446256000"
+      to_slot:
+        description: "Epoch end slot"
+        required: true
+        default: "446687999"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run gRPC fetch script
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+        run: |
+          mkdir -p data
+          node scripts/fetch_jito_usdc_grpc.mjs \
+            --from-slot "${{ inputs.from_slot }}" \
+            --to-slot "${{ inputs.to_slot }}" \
+            --out data/jito_usdc_raw_swaps.jsonl
+
+      - name: Upload JSONL as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jito-usdc-raw-swaps
+          path: data/jito_usdc_raw_swaps.jsonl
+
+      - name: Commit data file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/jito_usdc_raw_swaps.jsonl
+          git diff --cached --quiet || git commit -m "Update JTO-USDC raw swap data [skip ci]"
+          git push
