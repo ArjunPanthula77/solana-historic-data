@@ -1,0 +1,36 @@
+name: Fetch JTO-USDC last epoch data
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run fetch script
+        run: python scripts/fetch_jito_last_epoch.py
+
+      - name: Upload CSV as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jito-usdc-last-epoch
+          path: data/jito_usdc_last_epoch.csv
+
+      - name: Commit data file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/jito_usdc_last_epoch.csv
+          git diff --cached --quiet || git commit -m "Update JTO-USDC last epoch data [skip ci]"
+          git push
