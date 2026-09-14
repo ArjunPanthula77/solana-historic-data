@@ -1,0 +1,22 @@
+name: Diagnose Alchemy gRPC replay window
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_key:
+        description: "Alchemy API key (one-off, not stored)"
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - name: Run diagnostic
+        env:
+          ALCHEMY_API_KEY: ${{ inputs.api_key }}
+        run: node scripts/diag_grpc_replay.mjs
