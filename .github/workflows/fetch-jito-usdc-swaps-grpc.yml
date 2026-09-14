@@ -11,6 +11,10 @@ on:
         description: "Epoch end slot"
         required: true
         default: "446687999"
+      api_key:
+        description: "Alchemy API key (one-off; leave blank to use the ALCHEMY_API_KEY repo secret instead)"
+        required: false
+        default: ""
 
 jobs:
   fetch:
@@ -29,7 +33,7 @@ jobs:
 
       - name: Run gRPC fetch script
         env:
-          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+          ALCHEMY_API_KEY: ${{ inputs.api_key != '' && inputs.api_key || secrets.ALCHEMY_API_KEY }}
         run: |
           mkdir -p data
           node scripts/fetch_jito_usdc_grpc.mjs \
