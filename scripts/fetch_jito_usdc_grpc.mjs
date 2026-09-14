@@ -85,6 +85,7 @@ function balancesByOwnerAndMint(tokenBalances) {
 
 async function main() {
   const client = new Client(args.endpoint, API_KEY, undefined);
+  await client.connect();
   const stream = await client.subscribe();
 
   const out = fs.createWriteStream(args.out, { flags: 'w' });

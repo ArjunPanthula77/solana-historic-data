@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@triton-one/yellowstone-grpc": "^1.3.0"
+    "@triton-one/yellowstone-grpc": "7.0.1"
   }
 }
