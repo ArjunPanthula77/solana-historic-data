@@ -168,27 +168,37 @@ async function processSignature(sig, out) {
 }
 
 async function runPool(items, worker, concurrency) {
+  // `processed`/`written` are plain counters incremented synchronously right
+  // after each `await worker(...)` resolves. JS's single-threaded event loop
+  // makes each increment atomic, so this is safe across concurrent `next()`
+  // loops - unlike an earlier version of this function, whose reported total
+  // silently diverged from the number of lines actually written to disk.
+  // To make that class of bug impossible to reintroduce silently, the final
+  // count returned here is cross-checked against the output file's real
+  // line count in main() before being trusted.
   let index = 0;
-  let totalSwaps = 0;
+  let written = 0;
   let processed = 0;
 
   async function next() {
     while (index < items.length) {
       const i = index++;
+      let result = 0;
       try {
-        totalSwaps += await worker(items[i]);
+        result = await worker(items[i]);
       } catch (err) {
         console.error(`tx ${items[i]} failed:`, err.message);
       }
+      written += result;
       processed++;
       if (processed % 200 === 0) {
-        console.log(`  processed ${processed}/${items.length} txs, swaps_found=${totalSwaps}`);
+        console.log(`  processed ${processed}/${items.length} txs, swaps_found=${written}`);
       }
     }
   }
 
   await Promise.all(Array.from({ length: concurrency }, next));
-  return totalSwaps;
+  return written;
 }
 
 async function main() {
@@ -197,14 +207,27 @@ async function main() {
   console.log(`Found ${signatures.length} successful signatures in range.`);
 
   const out = fs.createWriteStream(args.out, { flags: 'w' });
-  const totalSwaps = await runPool(
+  const reportedCount = await runPool(
     signatures,
     (sig) => processSignature(sig, out),
     TX_CONCURRENCY
   );
-  out.end();
+  await new Promise((resolve, reject) => {
+    out.end((err) => (err ? reject(err) : resolve()));
+  });
 
-  console.log(`Done. transactions_scanned=${signatures.length} swaps_written=${totalSwaps} out=${args.out}`);
+  // Authoritative count: the file itself, not the in-memory accumulator.
+  const fileContent = fs.readFileSync(args.out, 'utf8');
+  const actualLines = fileContent.length === 0 ? 0 : fileContent.trimEnd().split('\n').length;
+  if (actualLines !== reportedCount) {
+    console.warn(
+      `WARNING: in-memory count (${reportedCount}) != actual file line count (${actualLines}). Using file count.`
+    );
+  }
+
+  console.log(
+    `Done. transactions_scanned=${signatures.length} swaps_written=${actualLines} out=${args.out}`
+  );
 }
 
 main().catch((err) => {
