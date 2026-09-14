@@ -1,0 +1,62 @@
+name: Fetch historical pool depth (Orca Whirlpool)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pool:
+        description: "Whirlpool address"
+        required: true
+        default: "AwBhvNXf5X5hNbC1jAqrJ7Stx5xLuG97xDjJ9PNy1h65"
+      from_slot:
+        description: "Epoch start slot"
+        required: true
+        default: "446256000"
+      to_slot:
+        description: "Epoch end slot"
+        required: true
+        default: "446687999"
+      api_key:
+        description: "Alchemy API key (one-off; leave blank to use the ALCHEMY_API_KEY repo secret instead)"
+        required: false
+        default: ""
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run pool depth fetch script
+        env:
+          ALCHEMY_API_KEY: ${{ inputs.api_key != '' && inputs.api_key || secrets.ALCHEMY_API_KEY }}
+        run: |
+          mkdir -p data
+          node scripts/fetch_historical_pool_depth.mjs \
+            --pool "${{ inputs.pool }}" \
+            --from-slot "${{ inputs.from_slot }}" \
+            --to-slot "${{ inputs.to_slot }}" \
+            --out data/pool_depth_1m.csv
+
+      - name: Upload CSV as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pool-depth-1m
+          path: data/pool_depth_1m.csv
+
+      - name: Commit data file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/pool_depth_1m.csv
+          git diff --cached --quiet || git commit -m "Update historical pool depth data [skip ci]"
+          git push

@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@triton-one/yellowstone-grpc": "7.0.1"
+    "@triton-one/yellowstone-grpc": "7.0.1",
+    "@orca-so/whirlpools-sdk": "0.22.0",
+    "@orca-so/common-sdk": "0.7.1",
+    "@solana/web3.js": "1.99.0"
   }
 }
