@@ -1,0 +1,21 @@
+name: Check account owner program
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_key:
+        description: "Alchemy API key (one-off, not stored)"
+        required: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check owner
+        env:
+          ALCHEMY_API_KEY: ${{ inputs.api_key }}
+        run: node scripts/check_owner.mjs
